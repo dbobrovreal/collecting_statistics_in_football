@@ -10,6 +10,9 @@ def request_to_receive_a_tour_id() -> None:
     (название команды которые играют между собой и id встречи)
     :return: None
     """
+    with open('responses.json', 'r', encoding='utf-8') as file:
+        tour = json.load(file).get('num_tour')
+
     headers: dict[str, str] = {
         'authority': 'api.sofascore.com',
         'accept': '*/*',
@@ -29,7 +32,7 @@ def request_to_receive_a_tour_id() -> None:
     }
 
     response: Response = requests.get(
-        'https://api.sofascore.com/api/v1/unique-tournament/17/season/52186/events/round/13',
+        f'https://api.sofascore.com/api/v1/unique-tournament/17/season/52186/events/round/{tour}',
         headers=headers)
 
     information_about_tours: list = list()
