@@ -15,24 +15,32 @@ def generating_a_statistics_report(player_statistics: list, result_tour: dict) -
     :param player_statistics:
     :return: None
     """
-    excel_data: DataFrame = pandas.read_excel('test.xlsx', sheet_name='Табличка')
+    with open('responses.json', 'r', encoding='utf-8') as file:
+        path_file = json.load(file).get('file_path')
+
+    excel_data: DataFrame = pandas.read_excel(f"{path_file}", sheet_name='Табличка')
     data: DataFrame = pandas.DataFrame(excel_data.fillna(0), columns=['GK', 'DEF', 'ATT DEF', 'CDM', 'CAM', 'WIN',
                                                                       'FWD', 'COACH', 'Nickname'])
     index: int = 0
     game_result: dict = dict()
-    manager = dict()
+    manager: dict = dict()
+    information_about_player_team: dict = dict()
 
     while True:
         if data['Nickname'].loc[index] != 0:
-            manager = filling_in_information_on_managers(info_manager=manager, info_by_table=data,
-                                                         row=index, result=result_tour)
-            game_result = fill_data_player(data_club_players=game_result, info_by_table=data,
-                                           row=index, statistic=player_statistics)
+            game_result, assembled_team = fill_data_player(data_club_players=game_result, info_by_table=data,
+                                                           row=index, statistic=player_statistics)
+            manager, assembled_team = filling_in_information_on_managers(info_manager=manager, info_by_table=data,
+                                                                         row=index, result=result_tour,
+                                                                         team=assembled_team)
+
+            information_about_player_team[data['Nickname'].loc[index]] = assembled_team
             index += 1
         else:
             break
 
-    calculating_statistics(information_received=game_result, information_manager=manager)
+    calculating_statistics(information_received=game_result, information_manager=manager,
+                           squad_game=information_about_player_team)
 
 
 def match_result(parameters):
