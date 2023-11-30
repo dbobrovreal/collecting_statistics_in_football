@@ -1,10 +1,13 @@
+import json
 from pandas import DataFrame, ExcelWriter
 from typing import List
+from decisive_action import decisive_action_players
 
 
-def calculating_statistics(information_received: dict, information_manager) -> None:
+def calculating_statistics(information_received: dict, information_manager, squad_game) -> None:
     """
     Метод для получения подробной информации о статистике выбранных игроков в матче тура
+    :param squad_game:
     :param information_manager:
     :param information_received:
     :return: None
@@ -59,11 +62,17 @@ def calculating_statistics(information_received: dict, information_manager) -> N
     table_formation.sort_values("Club", inplace=True, ascending=True)
     table_manager.sort_values("Club", inplace=True, ascending=True)
 
+    table_decisive_action = decisive_action_players(statistic_player=information_received, squad_game=squad_game)
+
     table_sheets_name = {
-        "Player_statistic": table_formation,
-        "Manager": table_manager
+        "Player statistic": table_formation,
+        "Manager": table_manager,
+        "Decisive action": table_decisive_action
     }
 
-    with ExcelWriter('game.xlsx', engine="openpyxl") as writer:
+    with open('responses.json', 'r', encoding='utf-8') as file:
+        path_dir = json.load(file).get("path_dir_save")
+
+    with ExcelWriter(f'{path_dir}\\game.xlsx', engine="openpyxl") as writer:
         for sheet_name in table_sheets_name.keys():
             table_sheets_name[sheet_name].to_excel(writer, sheet_name=sheet_name, index=False)
