@@ -10,7 +10,7 @@ def decoding_words(word) -> str:
 
 def getting_detailed_statistics(statistic: dict, game_status: str, missed_balls: int) -> dict:
     """
-    Метод для получения точно статистики игроков
+    Метод для получения точной статистики игроков
     :param missed_balls:
     :param game_status:
     :param statistic:
@@ -71,9 +71,10 @@ def getting_detailed_statistics(statistic: dict, game_status: str, missed_balls:
     return processed_statistics
 
 
-def filling_in_information_on_managers(info_manager, info_by_table: DataFrame, row: int, result: dict) -> dict:
+def filling_in_information_on_managers(info_manager, info_by_table: DataFrame, row: int, result: dict, team: list):
     """
     Метод заполняет информацию о тренере который выбрал игрок
+    :param team:
     :param info_by_table:
     :param info_manager:
     :param row:
@@ -88,42 +89,57 @@ def filling_in_information_on_managers(info_manager, info_by_table: DataFrame, r
         "club": club_manager.group()[1:-1].upper(),
         "result": result.get(club_manager.group()[1:-1].upper())
     }
+    team.append({
+        "name_manager": name_manager.group()[2:-2],
+        "point": point.group(),
+        "club": club_manager.group()[1:-1].upper(),
+        "result": result.get(club_manager.group()[1:-1].upper())
+        })
 
-    return info_manager
+    return info_manager, team
 
 
-def fill_data_player(data_club_players: dict, info_by_table: DataFrame, row: int, statistic) -> dict:
+def fill_data_player(data_club_players: dict, info_by_table: DataFrame, row: int, statistic) -> tuple[dict,
+    list[dict[str, str]]]:
     """
     Метод формирует точные данные об игроках
     :param data_club_players:
     :param info_by_table:
     :param row:
     :param statistic:
-    :return:
+    :return: dict
     """
+    squad_list = list()
+    list_positions = ['GK', 'DEF', 'ATT DEF', 'CDM', 'CAM', 'WIN', 'FWD']
+
     for column in range(0, 7):
         player: list = info_by_table.iat[row, column].split()
-        position: str = player[0][:-1]
+        position: str = list_positions[column]
         club: str = player[2][1:4].upper()
         full_name: str = re.sub(r'\([^)]*\)', '', info_by_table.iat[row, column])
-        name: str = decoding_words(re.sub(r'(?<!-)(?=[A-Z])', r' \g<0>', full_name[len(position) + 2:]))
-        if name[1:-1] not in data_club_players.keys():
+        name: str = decoding_words(re.sub(r'(?<!-)(?=[A-Z])', r' \g<0>', re.sub(r'([^:]+:)', '', full_name)))
+        squad_list.append({
+            "name": name[2:-1],
+            "position": position,
+            "club": club
+        })
+        if name[2:-1] not in data_club_players.keys():
             for static in statistic:
                 if static.get(club):
                     for club_player_statistics in static[club]:
                         search_name: str = decoding_words(club_player_statistics['name'])
-                        stats = getting_detailed_statistics(club_player_statistics.get('statistics'),
-                                                            game_status=static.get('result_match'),
-                                                            missed_balls=static.get('goals_conceded'))
-                        if re.search(name[1:-1], search_name):
-                            data_club_players[name[1:-1]] = {
+                        if re.search(name[2:-1], search_name):
+                            stats = getting_detailed_statistics(club_player_statistics.get('statistics'),
+                                                                game_status=static.get('result_match'),
+                                                                missed_balls=static.get('goals_conceded'))
+                            data_club_players[name[2:-1]] = {
                                 "position": position,
                                 "club": club,
                                 'statistic': stats
                             }
                             break
                     else:
-                        data_club_players[name[1:-1]] = {
+                        data_club_players[name[2:-1]] = {
                             "position": position,
                             "club": club,
                             'statistic': {
@@ -140,4 +156,4 @@ def fill_data_player(data_club_players: dict, info_by_table: DataFrame, row: int
                         }
                     break
 
-    return data_club_players
+    return data_club_players, squad_list
