@@ -4,8 +4,8 @@ import time
 import pandas
 from pandas import DataFrame
 from counting import calculating_statistics
-from typing import Any
-from data_collection import filling_in_information_on_managers, fill_data_player
+from typing import Any, Dict
+from data_collection import filling_in_information_on_managers, fill_data_player, decoding_words
 
 
 def generating_a_statistics_report(player_statistics: list, result_tour: dict) -> None:
@@ -16,7 +16,7 @@ def generating_a_statistics_report(player_statistics: list, result_tour: dict) -
     :return: None
     """
     with open('responses.json', 'r', encoding='utf-8') as file:
-        path_file = json.load(file).get('file_path')
+        path_file: str = json.load(file).get('file_path')
 
     excel_data: DataFrame = pandas.read_excel(f"{path_file}", sheet_name='Табличка')
     data: DataFrame = pandas.DataFrame(excel_data.fillna(0), columns=['GK', 'DEF', 'ATT DEF', 'CDM', 'CAM', 'WIN',
@@ -27,29 +27,36 @@ def generating_a_statistics_report(player_statistics: list, result_tour: dict) -
     information_about_player_team: dict = dict()
 
     while True:
-        if data['Nickname'].loc[index] != 0:
-            game_result, assembled_team = fill_data_player(data_club_players=game_result, info_by_table=data,
-                                                           row=index, statistic=player_statistics)
-            manager, assembled_team = filling_in_information_on_managers(info_manager=manager, info_by_table=data,
-                                                                         row=index, result=result_tour,
-                                                                         team=assembled_team)
-
-            information_about_player_team[data['Nickname'].loc[index]] = assembled_team
-            index += 1
-        else:
+        try:
+            if data['Nickname'].loc[index] != 0:
+                game_result, assembled_team = fill_data_player(data_club_players=game_result, info_by_table=data,
+                                                               row=index, statistic=player_statistics)
+                manager, assembled_team = filling_in_information_on_managers(info_manager=manager, info_by_table=data,
+                                                                             row=index, result=result_tour,
+                                                                             team=assembled_team)
+                information_about_player_team[data['Nickname'].loc[index]] = assembled_team
+                index += 1
+            else:
+                break
+        except KeyError:
             break
 
     calculating_statistics(information_received=game_result, information_manager=manager,
                            squad_game=information_about_player_team)
 
 
-def match_result(parameters):
-    json_result = dict()
+def match_result(parameters: list) -> Dict[str, str]:
+    """
+    Метод записывает в словарь результат матча каждого клуба
+    :param parameters: list
+    :return: Dict[str, str]
+    """
+    json_result: dict = dict()
     for info in parameters:
-        team_home = info["homeTeam"].get('nameCode')
-        result_home_team = info["homeTeam"].get("result_math")
-        team_away = info["awayTeam"].get('nameCode')
-        result_away_team = info["awayTeam"].get("result_math")
+        team_home: str = info["homeTeam"].get('nameCode')
+        result_home_team: str = info["homeTeam"].get("result_math")
+        team_away: str = info["awayTeam"].get('nameCode')
+        result_away_team: str = info["awayTeam"].get("result_math")
         json_result[team_home] = result_home_team
         json_result[team_away] = result_away_team
 
@@ -76,50 +83,65 @@ def getting_player_statistics(tour_parameters: list) -> None:
         'sec-fetch-dest': 'empty',
         'sec-fetch-mode': 'cors',
         'sec-fetch-site': 'same-site',
-        'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.686 Mobile Safari/537.36',
+        'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/116.0.5845.686 Mobile Safari/537.36',
         "If-Modified-Since": "Tues, 18 Jul 2023 00:00:00 GMT"
     }
     statistic: list = list()
 
-    game_summary = match_result(tour_parameters)
+    game_summary: dict[str, str] = match_result(parameters=tour_parameters)
 
     for games in tour_parameters:
-        print(f'{games["homeTeam"]["name"]} - {games["awayTeam"]["name"]}')
-        response = requests.get(f'https://api.sofascore.com/api/v1/event/{games["id"]}/lineups', headers=headers)
-        json_game_statistics = json.loads(response.text)
-        players_home: list[dict[str, Any]] = list()
-        players_away = list()
+        try:
+            print(f'Программа запрашивает данные матча: {games["homeTeam"]["name"]} - {games["awayTeam"]["name"]}',
+                  end=' ')
+            response: Response = requests.get(f'https://api.sofascore.com/api/v1/event/{games["id"]}/lineups',
+                                              headers=headers)
+            json_game_statistics: dict = json.loads(response.text)
+            players_home: list[dict[str, Any]] = list()
+            players_away = list()
+            statistic_home_team: dict = dict()
+            statistic_away_team: dict = dict()
+            for player_home in json_game_statistics['home']["players"]:
+                if player_home.get('statistics'):
+                    statistic_home_team: dict = player_home.get('statistics')
 
-        for player_home in json_game_statistics['home']["players"]:
-            players_home.append({
-                "name": player_home['player']['name'],
-                "position": player_home['position'],
-                "shirtNumber": player_home['shirtNumber'],
-                "statistics": player_home['statistics']
-            })
+                players_home.append({
+                    "name": decoding_words(player_home['player']['name']),
+                    "position": player_home['position'],
+                    "shirtNumber": player_home['shirtNumber'],
+                    "statistics": statistic_home_team
+                })
 
-        for player_away in json_game_statistics['away']["players"]:
-            players_away.append({
-                "name": player_away['player']['name'],
-                "position": player_away['position'],
-                "shirtNumber": player_away['shirtNumber'],
-                "statistics": player_away['statistics']
-            })
+            for player_away in json_game_statistics['away']["players"]:
+                if player_away.get('statistics'):
+                    statistic_away_team = player_away.get('statistics')
 
-        statistic.append(
-            {
-                f"{games['homeTeam'].get('nameCode')}": players_home,
-                "result_match": game_summary.get(games['homeTeam'].get('nameCode')),
-                "goals_conceded": games['homeTeam'].get('goals_conceded')
-            }
-        )
-        statistic.append(
-            {
-                f"{games['awayTeam'].get('nameCode')}": players_away,
-                "result_match": game_summary.get(games['awayTeam'].get('nameCode')),
-                "goals_conceded": games['awayTeam'].get('goals_conceded')
-            }
-        )
+                players_away.append({
+                    "name": decoding_words(player_away['player']['name']),
+                    "position": player_away['position'],
+                    "shirtNumber": player_away['shirtNumber'],
+                    "statistics": statistic_away_team
+                })
 
-        time.sleep(5)
+            statistic.append(
+                {
+                    f"{games['homeTeam'].get('nameCode')}": players_home,
+                    "result_match": game_summary.get(games['homeTeam'].get('nameCode')),
+                    "goals_conceded": games['homeTeam'].get('goals_conceded')
+                }
+            )
+            statistic.append(
+                {
+                    f"{games['awayTeam'].get('nameCode')}": players_away,
+                    "result_match": game_summary.get(games['awayTeam'].get('nameCode')),
+                    "goals_conceded": games['awayTeam'].get('goals_conceded')
+                }
+            )
+
+            time.sleep(5)
+            print("\033[32m Успешно \033[0m")
+        except:
+            print('\033[31m Ошибка \033[0m')
+
     generating_a_statistics_report(player_statistics=statistic, result_tour=game_summary)
