@@ -1,4 +1,5 @@
 import requests
+from requests import Response
 import json
 import time
 import pandas
@@ -69,7 +70,7 @@ def getting_player_statistics(tour_parameters: list) -> None:
     :param tour_parameters:
     :return: None
     """
-    headers: dict[str, str] = {
+    headers: Dict[str, str] = {
         'authority': 'api.sofascore.com',
         'accept': '*/*',
         'accept-language': 'ru,en;q=0.9',
@@ -87,9 +88,28 @@ def getting_player_statistics(tour_parameters: list) -> None:
                       'Chrome/116.0.5845.686 Mobile Safari/537.36',
         "If-Modified-Since": "Tues, 18 Jul 2023 00:00:00 GMT"
     }
+
+    headers_events: Dict[str, str] = {
+        'authority': 'api.sofascore.com',
+        'accept': '*/*',
+        'accept-language': 'ru,en;q=0.9',
+        'if-none-match': 'W/"1df332c938"',
+        'origin': 'https://www.sofascore.com',
+        'referer': 'https://www.sofascore.com/',
+        'sec-ch-ua': '"Chromium";v="118", "YaBrowser";v="23", "Not=A?Brand";v="99"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-site',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/118.0.5993.2470 YaBrowser/23.11.0.2470 Yowser/2.5 Safari/537.36',
+        "If-Modified-Since": "Tues, 18 Jul 2023 00:00:00 GMT"
+    }
+
     statistic: list = list()
 
-    game_summary: dict[str, str] = match_result(parameters=tour_parameters)
+    game_summary: Dict[str, str] = match_result(parameters=tour_parameters)
 
     for games in tour_parameters:
         try:
@@ -123,19 +143,32 @@ def getting_player_statistics(tour_parameters: list) -> None:
                     "shirtNumber": player_away['shirtNumber'],
                     "statistics": statistic_away_team
                 })
+            response_events = requests.get(f'https://api.sofascore.com/api/v1/event/{games["id"]}/incidents',
+                                           headers=headers_events)
+            missed_home: list = list()
+            missed_away: list = list()
+            list_incidents: list = response_events.json()['incidents']
+            for elem in list_incidents[-1::-1]:
+                if elem['incidentType'] == 'goal':
+                    if elem['isHome']:
+                        missed_away.append(elem['time'])
+                    else:
+                        missed_home.append(elem['time'])
 
             statistic.append(
                 {
                     f"{games['homeTeam'].get('nameCode')}": players_home,
                     "result_match": game_summary.get(games['homeTeam'].get('nameCode')),
-                    "goals_conceded": games['homeTeam'].get('goals_conceded')
+                    "goals_conceded": games['homeTeam'].get('goals_conceded'),
+                    "minutes_missed": missed_home
                 }
             )
             statistic.append(
                 {
                     f"{games['awayTeam'].get('nameCode')}": players_away,
                     "result_match": game_summary.get(games['awayTeam'].get('nameCode')),
-                    "goals_conceded": games['awayTeam'].get('goals_conceded')
+                    "goals_conceded": games['awayTeam'].get('goals_conceded'),
+                    "minutes_missed": missed_away
                 }
             )
 
@@ -143,5 +176,4 @@ def getting_player_statistics(tour_parameters: list) -> None:
             print("\033[32m Успешно \033[0m")
         except:
             print('\033[31m Ошибка \033[0m')
-
     generating_a_statistics_report(player_statistics=statistic, result_tour=game_summary)
