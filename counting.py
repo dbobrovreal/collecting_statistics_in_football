@@ -1,10 +1,11 @@
 import json
 from pandas import DataFrame, ExcelWriter
-from typing import List, TypedDict, Dict
+from typing import List, Dict
 from decisive_action import decisive_action_players
 from chemistry_players import formation_table_with_chemistry_of_players
-from style import setting_style_for_the_tables
+from style.style import setting_style_for_the_tables
 from data_collection import DataPlayer
+from tkinter.messagebox import showerror
 
 
 def creating_table_with_results_of_players(statistics: Dict[str, Dict[str, DataPlayer]]) -> DataFrame:
@@ -75,6 +76,37 @@ def formation_of_table_with_coaches(data_coach) -> DataFrame:
     return table_manager
 
 
+def formation_of_final_points_table(table_decisive_action, table_goal, table_dry_game, table_chemistry):
+    nicname = list()
+    main_points = list()
+    goal_bonus = list()
+    def_chemistry = list()
+    att_chemistry = list()
+    sum_pst = list()
+    for index in range(1, len(table_decisive_action)):
+        nicname.append(table_decisive_action['Nicname'].loc[index])
+        main_points.append(table_decisive_action['Sum Pts'].loc[index])
+        goal_bonus.append(table_goal['SUM PST'].loc[index - 1])
+        def_chemistry.append(table_dry_game['Sum Pst'].loc[index - 1])
+        att_chemistry.append(table_chemistry['Sum Pst'].loc[index - 1])
+        sum_point = table_decisive_action['Sum Pts'].loc[index] + table_goal['SUM PST'].loc[index - 1] + \
+                    table_dry_game['Sum Pst'].loc[index - 1] + table_chemistry['Sum Pst'].loc[index - 1]
+        sum_pst.append(sum_point)
+
+    table_example = DataFrame(
+        {
+            "Nicname": nicname,
+            "Main Points": main_points,
+            "Goal Bonus": goal_bonus,
+            "Def Chemistry": def_chemistry,
+            "Att Chemistry": att_chemistry,
+            "Sum Pst": sum_pst
+        }
+    )
+
+    return table_example
+
+
 def calculating_statistics(
         information_received: Dict[str, Dict[str, DataPlayer]],
         information_manager: Dict[str, Dict[str, int | str]],
@@ -97,20 +129,33 @@ def calculating_statistics(
     table_goal, table_dry_game, table_chemistry = formation_table_with_chemistry_of_players(
         statistic_player=information_received, squad_gamer=squad_game)
 
+    table_example = formation_of_final_points_table(
+        table_decisive_action=table_decisive_action,
+        table_goal=table_goal,
+        table_dry_game=table_dry_game,
+        table_chemistry=table_chemistry
+    )
+    table_example.sort_values("Sum Pst", inplace=True, ascending=False)
+
     table_sheets_name: Dict[str, DataFrame] = {
         "Player statistic": table_with_players,
         "Manager": table_manager,
         "Decisive action": table_decisive_action,
         "Goal": table_goal,
         "Clear sheet": table_dry_game,
-        "Goal and Assist": table_chemistry
+        "Goal and Assist": table_chemistry,
+        "Example": table_example
     }
 
     with open('responses.json', 'r', encoding='utf-8') as file:
         path_dir: str = json.load(file).get("path_dir_save")
 
-    with ExcelWriter(f'{path_dir}\\game.xlsx', engine="openpyxl") as writer:
-        for sheet_name in table_sheets_name.keys():
-            table_sheets_name[sheet_name].to_excel(writer, sheet_name=sheet_name, index=False)
+    try:
+        with ExcelWriter(f'{path_dir}\\game.xlsx', engine="openpyxl") as writer:
+            for sheet_name in table_sheets_name.keys():
+                table_sheets_name[sheet_name].to_excel(writer, sheet_name=sheet_name, index=False)
+    except PermissionError:
+        showerror(message='Закройте файл game.xlsx и повторите запрос')
+        return None
 
     setting_style_for_the_tables(f'{path_dir}\\game.xlsx')
