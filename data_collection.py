@@ -92,7 +92,8 @@ def filling_in_information_on_managers(
     :param result:
     :return: dict
     """
-    if re.search(r'\d+', info_by_table.iat[row, 7]):
+    if (re.search(r'\d+', f'{info_by_table.iat[row, 7]}') and
+            re.search(r'\(\w+\)', f'{info_by_table.iat[row, 7]}')):
         point: Match[str] = re.search(r'\d+', info_by_table.iat[row, 7])
         club_manager: Match[str] = re.search(r'\(\w+\)', info_by_table.iat[row, 7])
         split_name_manager = info_by_table.iat[row, 7].split(":")

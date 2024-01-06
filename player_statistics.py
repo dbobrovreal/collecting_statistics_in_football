@@ -43,7 +43,7 @@ def generating_a_statistics_report(player_statistics: list, result_tour: dict) -
             break
 
     calculating_statistics(information_received=game_result, information_manager=manager,
-                           squad_game=information_about_player_team)
+                           squad_game=information_about_player_team, table_with_commands=data)
 
 
 def match_result(parameters: list) -> Dict[str, str]:
@@ -123,8 +123,7 @@ def getting_player_statistics(tour_parameters: list) -> None:
             statistic_home_team: dict = dict()
             statistic_away_team: dict = dict()
             for player_home in json_game_statistics['home']["players"]:
-                if player_home.get('statistics'):
-                    statistic_home_team: dict = player_home.get('statistics')
+                statistic_home_team: dict = player_home.get('statistics')
 
                 players_home.append({
                     "name": decoding_words(player_home['player']['name']),
@@ -134,8 +133,7 @@ def getting_player_statistics(tour_parameters: list) -> None:
                 })
 
             for player_away in json_game_statistics['away']["players"]:
-                if player_away.get('statistics'):
-                    statistic_away_team = player_away.get('statistics')
+                statistic_away_team = player_away.get('statistics')
 
                 players_away.append({
                     "name": decoding_words(player_away['player']['name']),
@@ -176,4 +174,5 @@ def getting_player_statistics(tour_parameters: list) -> None:
             print("\033[32m Успешно \033[0m")
         except:
             print('\033[31m Ошибка \033[0m')
+
     generating_a_statistics_report(player_statistics=statistic, result_tour=game_summary)

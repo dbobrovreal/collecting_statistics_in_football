@@ -41,12 +41,12 @@ def request_to_receive_a_tour_id() -> bool:
     information_about_tours: list = list()
 
     status_flag: bool = False
-    result_home: None = None
-    result_away: None = None
 
     for rouds in json.loads(response_statistics.text)['events']:
         goal_home: int = 0
         goal_away: int = 0
+        result_home: None = None
+        result_away: None = None
         if rouds['status']['code'] != 100:
             print(f'\033[31m Еще не сыгран матч {rouds["homeTeam"].get("name")} - {rouds["awayTeam"].get("name")}'
                   f'\033[0m')
@@ -87,6 +87,7 @@ def request_to_receive_a_tour_id() -> bool:
                 "id": rouds['id']
             }
         )
+
     if not status_flag:
         return False
 

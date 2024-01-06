@@ -77,30 +77,30 @@ def formation_of_table_with_coaches(data_coach) -> DataFrame:
 
 
 def formation_of_final_points_table(table_decisive_action, table_goal, table_dry_game, table_chemistry):
-    nicname = list()
+    nickname = list()
     main_points = list()
     goal_bonus = list()
     def_chemistry = list()
     att_chemistry = list()
     sum_pst = list()
     for index in range(1, len(table_decisive_action)):
-        nicname.append(table_decisive_action['Nicname'].loc[index])
-        main_points.append(table_decisive_action['Sum Pts'].loc[index])
-        goal_bonus.append(table_goal['SUM PST'].loc[index - 1])
-        def_chemistry.append(table_dry_game['Sum Pst'].loc[index - 1])
-        att_chemistry.append(table_chemistry['Sum Pst'].loc[index - 1])
-        sum_point = table_decisive_action['Sum Pts'].loc[index] + table_goal['SUM PST'].loc[index - 1] + \
-                    table_dry_game['Sum Pst'].loc[index - 1] + table_chemistry['Sum Pst'].loc[index - 1]
+        nickname.append(table_decisive_action['Nickname'].loc[index])
+        main_points.append(table_decisive_action['SUM PTS'].loc[index])
+        goal_bonus.append(table_goal['SUM PTS'].loc[index - 1])
+        def_chemistry.append(table_dry_game['SUM PTS'].loc[index - 1])
+        att_chemistry.append(table_chemistry['SUM PTS'].loc[index - 1])
+        sum_point = table_decisive_action['SUM PTS'].loc[index] + table_goal['SUM PTS'].loc[index - 1] + \
+                    table_dry_game['SUM PTS'].loc[index - 1] + table_chemistry['SUM PTS'].loc[index - 1]
         sum_pst.append(sum_point)
 
     table_example = DataFrame(
         {
-            "Nicname": nicname,
+            "Nickname": nickname,
             "Main Points": main_points,
             "Goal Bonus": goal_bonus,
             "Def Chemistry": def_chemistry,
             "Att Chemistry": att_chemistry,
-            "Sum Pst": sum_pst
+            "SUM PTS": sum_pst
         }
     )
 
@@ -108,17 +108,21 @@ def formation_of_final_points_table(table_decisive_action, table_goal, table_dry
 
 
 def calculating_statistics(
-        information_received: Dict[str, Dict[str, DataPlayer]],
-        information_manager: Dict[str, Dict[str, int | str]],
-        squad_game: Dict[str, List[Dict[str, str]]]
+    information_received: Dict[str, Dict[str, DataPlayer]],
+    information_manager: Dict[str, Dict[str, int | str]],
+    squad_game: Dict[str, List[Dict[str, str]]],
+    table_with_commands: DataFrame
 ) -> None:
     """
     Метод для формирование итогового результа игры и запись в excel таблицу
+    :param table_with_commands:
     :param squad_game:
     :param information_manager:
     :param information_received:
     :return: None
     """
+    table_with_commands = table_with_commands.replace(0, None)
+
     table_with_players: DataFrame = creating_table_with_results_of_players(statistics=information_received)
     table_manager: DataFrame = formation_of_table_with_coaches(data_coach=information_manager)
 
@@ -135,14 +139,15 @@ def calculating_statistics(
         table_dry_game=table_dry_game,
         table_chemistry=table_chemistry
     )
-    table_example.sort_values("Sum Pst", inplace=True, ascending=False)
+    table_example.sort_values("SUM PTS", inplace=True, ascending=False)
 
     table_sheets_name: Dict[str, DataFrame] = {
+        "Табличка": table_with_commands,
         "Player statistic": table_with_players,
         "Manager": table_manager,
         "Decisive action": table_decisive_action,
         "Goal": table_goal,
-        "Clear sheet": table_dry_game,
+        "Clean sheet": table_dry_game,
         "Goal and Assist": table_chemistry,
         "Example": table_example
     }

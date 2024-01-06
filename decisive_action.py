@@ -18,7 +18,7 @@ def table_formation_decisive_action(result, coefficients) -> DataFrame:
     splitting_into_groups[9].insert(0, None)
 
     table_decisive_action = DataFrame({
-        "Nicname": splitting_into_groups[0],
+        "Nickname": splitting_into_groups[0],
         "Saves": splitting_into_groups[1],
         "Clean Sheets": splitting_into_groups[2],
         "Assists": splitting_into_groups[3],
@@ -27,7 +27,7 @@ def table_formation_decisive_action(result, coefficients) -> DataFrame:
         "Shots": splitting_into_groups[6],
         "Goals": splitting_into_groups[7],
         "Win": splitting_into_groups[8],
-        "Sum Pts": splitting_into_groups[9]
+        "SUM PTS": splitting_into_groups[9]
     })
 
     return table_decisive_action
@@ -47,38 +47,36 @@ def decisive_action_players(statistic_player, squad_game):
             if not gamer:
                 points_scored.append(0)
             else:
-                individual_statistics = statistic_player[gamer["name"]].get("statistic")
-                match gamer["position"]:
-                    case "GK":
-                        points_save = (individual_statistics['saves'] + individual_statistics['penalty_save']) * \
-                                      coefficients.get('save')
-                        points_scored.append(points_save)
-                    case "DEF":
-                        if individual_statistics['clean_sheets'] != 0:
-                            points_scored.append(coefficients.get('clean_sheets'))
-                        else:
-                            points_scored.append(0)
-                    case "ATT DEF":
-                        if individual_statistics['assists_total'] != 0:
-                            points_scored.append(coefficients.get('assist'))
-                        else:
-                            points_scored.append(0)
-                    case "CDM":
-                        defensive_action_points = individual_statistics['interceptions'] + \
-                                                  individual_statistics['shotsblocked'] + \
-                                                  individual_statistics['tackleswon']
-                        points_scored.append(defensive_action_points * coefficients.get('defensive_actions'))
-                    case "CAM":
-                        points_chances_created = individual_statistics['chancescreated'] * \
-                                                 coefficients.get('chances_created')
-                        points_scored.append(points_chances_created)
-                    case "WIN":
-                        points_scored.append(individual_statistics['shots'] * coefficients.get('shots'))
-                    case 'FWD':
-                        if individual_statistics['goals'] != 0:
-                            points_scored.append(coefficients.get('goals'))
-                        else:
-                            points_scored.append(0)
+                if statistic_player.get(gamer['name']):
+                    individual_statistics = statistic_player[gamer["name"]].get("statistic")
+                    match gamer["position"]:
+                        case "GK":
+                            points_save = (individual_statistics['saves'] + individual_statistics['penalty_save']) * \
+                                          coefficients.get('save')
+                            points_scored.append(points_save)
+                        case "DEF":
+                            if individual_statistics['clean_sheets'] != 0:
+                                points_scored.append(coefficients.get('clean_sheets'))
+                            else:
+                                points_scored.append(0)
+                        case "ATT DEF":
+                            points_scored.append(coefficients.get('assist') *
+                                                 individual_statistics.get('assists_total'))
+                        case "CDM":
+                            defensive_action_points = individual_statistics['interceptions'] + \
+                                                      individual_statistics['shotsblocked'] + \
+                                                      individual_statistics['tackleswon']
+                            points_scored.append(defensive_action_points * coefficients.get('defensive_actions'))
+                        case "CAM":
+                            points_chances_created = individual_statistics['chancescreated'] * \
+                                                     coefficients.get('chances_created')
+                            points_scored.append(points_chances_created)
+                        case "WIN":
+                            points_scored.append(individual_statistics['shots'] * coefficients.get('shots'))
+                        case 'FWD':
+                            points_scored.append(coefficients.get('goals') * individual_statistics['goals'])
+                else:
+                    points_scored.append(0)
 
         if squad_game[name_games][number_players].get('result') == 'win':
             points_scored.append(int(squad_game[name_games][number_players].get('point')))
